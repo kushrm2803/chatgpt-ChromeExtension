@@ -1,3 +1,7 @@
+//script to run as soon as the Chrome extension is installed or reloaded
+
+let selectedText = '';
+
 // For context Menu
 chrome.runtime.onInstalled.addListener(() => {
   console.log("Extension Started");
@@ -10,23 +14,34 @@ chrome.runtime.onInstalled.addListener(() => {
 
 // Handle the event
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-  console.log("Got selected text ",info.selectionText);
   if (info.menuItemId === "openWithChatGPT") {
-    // Send a message to the content script to fetch the selected text
-    chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      function: fetchSelectedText,
-      args: [info.selectionText],
-    });
+    console.log("Context menu item clicked", info.selectionText);
+    selectedText = info.selectionText; // Store the selected text
+    openPopup();
   }
 });
 
-//Error in this function
-function fetchSelectedText(selectedText) {
-  chrome.storage.local.set({ selectedText: selectedText }, () => {
-    console.log("Selected text saved:", selectedText);
+function openPopup() {
+  chrome.windows.create({
+    url: "popup.html",
+    type: "popup",
+    width: 500, 
+    height: 350, 
   });
+}
 
-  // Open the popup
-  chrome.action.openPopup();
+// Listen for messages from the popup to get the selected text
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'getSelectedText') {
+    sendResponse({ text: selectedText });
+  }
+  if (message.action === 'getUserInput') {
+    const userInput = message.userInput;
+    // Send user input to ChatGPT
+    fetchChatGPTResponse(userInput);
+  }
+});
+
+function fetchChatGPTResponse(userInput) {
+  
 }
